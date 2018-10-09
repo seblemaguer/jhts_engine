@@ -80,8 +80,6 @@ public class JHTSEngineWrapperTest {
 
     @Test
     public void testSynthesis() throws Exception {
-
-
         // Load label
         URL url_lab = JHTSEngineWrapperTest.class.getResource("test.lab");
         File lab_f = new File(url_lab.toURI());
@@ -113,6 +111,38 @@ public class JHTSEngineWrapperTest {
         Assert.assertEquals(ref_short.length, rend_short.length);
         for (int s=0; s<ref_short.length; s++) {
             Assert.assertEquals(ref_short[s], rend_short[s], 0);
+        }
+    }
+
+
+    @Test
+    public void testLF0() throws Exception {
+
+        // Load label
+        URL url_lab = JHTSEngineWrapperTest.class.getResource("test.lab");
+        File lab_f = new File(url_lab.toURI());
+        List<String> lines = Files.readAllLines(lab_f.toPath());
+        String labels[] = lines.toArray(new String[0]);
+
+        // Generate
+        AudioInputStream ais = ew.synthesize(labels);
+        double[][] f0 = ew.getGenerateParameterSequence(1);
+
+        // Load reference F0
+        byte[] bytes = ByteStreams.toByteArray(JHTSEngineWrapperTest.class.getResourceAsStream("test.lf0"));
+        ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        byteBuffer.put(bytes);
+        byteBuffer.rewind();
+
+        // Define as FLOT
+        float[] f0_ref = new float[byteBuffer.asFloatBuffer().remaining()];
+        byteBuffer.asFloatBuffer().get(f0_ref);
+
+        // Assert !
+        Assert.assertEquals(f0.length, f0_ref.length);
+        for (int t=0; t<f0.length; t++) {
+            Assert.assertEquals((float) f0[t][0], (float) f0_ref[t], 0.00001);
         }
     }
 }
