@@ -33,15 +33,15 @@ task generateSrc(type: SwigTask) {
 
     // Pathes
     javaSourcesPath = file("$buildDir/generatedSrc/main/java/jhts_engine")
-    source = new File("$projectDir/swig/sptk.i")
+    source = new File("$projectDir/swig/hts_engine.i")
     wrapperTargetFile = file("$buildDir/generatedSrc/main/c/hts_engine_wrap.c")
     ext {
         sourceDir = layout.buildDirectory.dir('generatedSrc/main/c')
-        headerDir = layout.projectDirectory.dir('hts-engine/include')
+        headerDir = layout.projectDirectory.dir('hts_engine/include')
     }
 
     // Java info
-    module = "HTS-Engine"
+    module = "HTSEngine"
     packageName = "jhts_engine"
 }
 
@@ -60,7 +60,7 @@ compileJava {
 
 model {
     components {
-        sptk(NativeLibrarySpec) {
+        hts_engine(NativeLibrarySpec) {
             sources {
                 generated(CSourceSet) {
                     generatedBy tasks.generateSrc
@@ -68,7 +68,7 @@ model {
 
                 c {
                     source {
-                        srcDirs 'SPTK/'
+                        srcDirs 'hts_engine/'
                         include '**/*.c'
                         exclude "example/*.c"
                         exclude "wavjoin/*"
@@ -78,7 +78,7 @@ model {
                         }
                     }
                     exportedHeaders {
-                        srcDir 'SPTK/include'
+                        srcDir 'hts_engine/include'
                     }
                 }
             }
@@ -102,9 +102,9 @@ model {
 
     tasks {
         processResources {
-            dependsOn sptkSharedLibrary
+            dependsOn hts_engineSharedLibrary
             from "${buildDir}/libs/", {
-                include '**/libsptk.*'
+                include '**/libhts_engine.*'
                 eachFile {
                     it.path = it.name
                 }
