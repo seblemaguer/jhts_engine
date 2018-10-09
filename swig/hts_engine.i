@@ -2,232 +2,292 @@
 %array_functions( double, double_array );
 %array_functions( double*, double_p_array );
 
+
+/**********************************************************************************************************************/
+
+/* This tells SWIG to treat char ** as a special case when used as a parameter in a function call */
+%typemap(in) char ** (jint size) {
+  int i = 0;
+  size = (*jenv)->GetArrayLength(jenv, $input);
+  $1 = (char **) malloc((size+1)*sizeof(char *));
+  /* make a copy of each string */
+  for (i = 0; i<size; i++) {
+    jstring j_string = (jstring)(*jenv)->GetObjectArrayElement(jenv, $input, i);
+    const char * c_string = (*jenv)->GetStringUTFChars(jenv, j_string, 0);
+    $1[i] = malloc(strlen((c_string)+1)*sizeof(const char *));
+    strcpy($1[i], c_string);
+    (*jenv)->ReleaseStringUTFChars(jenv, j_string, c_string);
+    (*jenv)->DeleteLocalRef(jenv, j_string);
+  }
+  $1[i] = 0;
+ }
+
+/* This cleans up the memory we malloc'd before the function call */
+%typemap(freearg) char ** {
+  int i;
+  for (i=0; i<size$argnum-1; i++)
+    free($1[i]);
+  free($1);
+ }
+
+/* This allows a C function to return a char ** as a Java String array */
+%typemap(out) char ** {
+  int i;
+  int len=0;
+  jstring temp_string;
+  const jclass clazz = (*jenv)->FindClass(jenv, "java/lang/String");
+
+  while ($1[len]) len++;
+  jresult = (*jenv)->NewObjectArray(jenv, len, clazz, NULL);
+  /* exception checking omitted */
+
+  for (i=0; i<len; i++) {
+    temp_string = (*jenv)->NewStringUTF(jenv, *result++);
+    (*jenv)->SetObjectArrayElement(jenv, jresult, i, temp_string);
+    (*jenv)->DeleteLocalRef(jenv, temp_string);
+  }
+ }
+
+/* These 3 typemaps tell SWIG what JNI and Java types to use */
+%typemap(jni) char ** "jobjectArray"
+  %typemap(jtype) char ** "String[]"
+  %typemap(jstype) char ** "String[]"
+
+ /* These 2 typemaps handle the conversion of the jtype to jstype typemap type and visa versa */
+  %typemap(javain) char ** "$javainput"
+  %typemap(javaout) char ** {
+  return $jnicall;
+ }
+
+/**********************************************************************************************************************/
+
+
 %{
-  #include "HTS_engine.h"
-%}
+#include "HTS_engine.h"
+  %}
 
 /* audio ----------------------------------------------------------- */
 
 /* HTS_Audio: audio output wrapper */
 typedef struct _HTS_Audio {
-   size_t sampling_frequency;   /* sampling frequency */
-   size_t max_buff_size;        /* buffer size for audio output interface */
-   short *buff;                 /* current buffer */
-   size_t buff_size;            /* current buffer size */
-   void *audio_interface;       /* audio interface specified in compile step */
+  size_t sampling_frequency;   /* sampling frequency */
+  size_t max_buff_size;        /* buffer size for audio output interface */
+  short *buff;                 /* current buffer */
+  size_t buff_size;            /* current buffer size */
+  void *audio_interface;       /* audio interface specified in compile step */
 } HTS_Audio;
 
 /* model ----------------------------------------------------------- */
 
 /* HTS_Window: window coefficients to calculate dynamic features. */
 typedef struct _HTS_Window {
-   size_t size;                 /* # of windows (static + deltas) */
-   int *l_width;                /* left width of windows */
-   int *r_width;                /* right width of windows */
-   double **coefficient;        /* window coefficient */
-   size_t max_width;            /* maximum width of windows */
+  size_t size;                 /* # of windows (static + deltas) */
+  int *l_width;                /* left width of windows */
+  int *r_width;                /* right width of windows */
+  double **coefficient;        /* window coefficient */
+  size_t max_width;            /* maximum width of windows */
 } HTS_Window;
 
 /* HTS_Pattern: list of patterns in a question and a tree. */
 typedef struct _HTS_Pattern {
-   char *string;                /* pattern string */
-   struct _HTS_Pattern *next;   /* pointer to the next pattern */
+  char *string;                /* pattern string */
+  struct _HTS_Pattern *next;   /* pointer to the next pattern */
 } HTS_Pattern;
 
 /* HTS_Question: list of questions in a tree. */
 typedef struct _HTS_Question {
-   char *string;                /* name of this question */
-   HTS_Pattern *head;           /* pointer to the head of pattern list */
-   struct _HTS_Question *next;  /* pointer to the next question */
+  char *string;                /* name of this question */
+  HTS_Pattern *head;           /* pointer to the head of pattern list */
+  struct _HTS_Question *next;  /* pointer to the next question */
 } HTS_Question;
 
 /* HTS_Node: list of tree nodes in a tree. */
 typedef struct _HTS_Node {
-   int index;                   /* index of this node */
-   size_t pdf;                  /* index of PDF for this node (leaf node only) */
-   struct _HTS_Node *yes;       /* pointer to its child node (yes) */
-   struct _HTS_Node *no;        /* pointer to its child node (no) */
-   struct _HTS_Node *next;      /* pointer to the next node */
-   HTS_Question *quest;         /* question applied at this node */
+  int index;                   /* index of this node */
+  size_t pdf;                  /* index of PDF for this node (leaf node only) */
+  struct _HTS_Node *yes;       /* pointer to its child node (yes) */
+  struct _HTS_Node *no;        /* pointer to its child node (no) */
+  struct _HTS_Node *next;      /* pointer to the next node */
+  HTS_Question *quest;         /* question applied at this node */
 } HTS_Node;
 
 /* HTS_Tree: list of decision trees in a model. */
 typedef struct _HTS_Tree {
-   HTS_Pattern *head;           /* pointer to the head of pattern list for this tree */
-   struct _HTS_Tree *next;      /* pointer to next tree */
-   HTS_Node *root;              /* root node of this tree */
-   size_t state;                /* state index of this tree */
+  HTS_Pattern *head;           /* pointer to the head of pattern list for this tree */
+  struct _HTS_Tree *next;      /* pointer to next tree */
+  HTS_Node *root;              /* root node of this tree */
+  size_t state;                /* state index of this tree */
 } HTS_Tree;
 
 /* HTS_Model: set of PDFs, decision trees and questions. */
 typedef struct _HTS_Model {
-   size_t vector_length;        /* vector length (static features only) */
-   size_t num_windows;          /* # of windows for delta */
-   HTS_Boolean is_msd;          /* flag for MSD */
-   size_t ntree;                /* # of trees */
-   size_t *npdf;                /* # of PDFs at each tree */
-   float ***pdf;                /* PDFs */
-   HTS_Tree *tree;              /* pointer to the list of trees */
-   HTS_Question *question;      /* pointer to the list of questions */
+  size_t vector_length;        /* vector length (static features only) */
+  size_t num_windows;          /* # of windows for delta */
+  HTS_Boolean is_msd;          /* flag for MSD */
+  size_t ntree;                /* # of trees */
+  size_t *npdf;                /* # of PDFs at each tree */
+  float ***pdf;                /* PDFs */
+  HTS_Tree *tree;              /* pointer to the list of trees */
+  HTS_Question *question;      /* pointer to the list of questions */
 } HTS_Model;
 
 /* HTS_ModelSet: set of duration models, HMMs and GV models. */
 typedef struct _HTS_ModelSet {
-   char *hts_voice_version;     /* version of HTS voice format */
-   size_t sampling_frequency;   /* sampling frequency */
-   size_t frame_period;         /* frame period */
-   size_t num_voices;           /* # of HTS voices */
-   size_t num_states;           /* # of HMM states */
-   size_t num_streams;          /* # of streams */
-   char *stream_type;           /* stream type */
-   char *fullcontext_format;    /* fullcontext label format */
-   char *fullcontext_version;   /* version of fullcontext label */
-   HTS_Question *gv_off_context;        /* GV switch */
-   char **option;               /* options for each stream */
-   HTS_Model *duration;         /* duration PDFs and trees */
-   HTS_Window *window;          /* window coefficients for delta */
-   HTS_Model **stream;          /* parameter PDFs and trees */
-   HTS_Model **gv;              /* GV PDFs and trees */
+  char *hts_voice_version;     /* version of HTS voice format */
+  size_t sampling_frequency;   /* sampling frequency */
+  size_t frame_period;         /* frame period */
+  size_t num_voices;           /* # of HTS voices */
+  size_t num_states;           /* # of HMM states */
+  size_t num_streams;          /* # of streams */
+  char *stream_type;           /* stream type */
+  char *fullcontext_format;    /* fullcontext label format */
+  char *fullcontext_version;   /* version of fullcontext label */
+  HTS_Question *gv_off_context;        /* GV switch */
+  char **option;               /* options for each stream */
+  HTS_Model *duration;         /* duration PDFs and trees */
+  HTS_Window *window;          /* window coefficients for delta */
+  HTS_Model **stream;          /* parameter PDFs and trees */
+  HTS_Model **gv;              /* GV PDFs and trees */
 } HTS_ModelSet;
 
 /* label ----------------------------------------------------------- */
 
 /* HTS_LabelString: individual label string with time information */
 typedef struct _HTS_LabelString {
-   struct _HTS_LabelString *next;       /* pointer to next label string */
-   char *name;                  /* label string */
-   double start;                /* start frame specified in the given label */
-   double end;                  /* end frame specified in the given label */
+  struct _HTS_LabelString *next;       /* pointer to next label string */
+  char *name;                  /* label string */
+  double start;                /* start frame specified in the given label */
+  double end;                  /* end frame specified in the given label */
 } HTS_LabelString;
 
 /* HTS_Label: list of label strings */
 typedef struct _HTS_Label {
-   HTS_LabelString *head;       /* pointer to the head of label string */
-   size_t size;                 /* # of label strings */
+  HTS_LabelString *head;       /* pointer to the head of label string */
+  size_t size;                 /* # of label strings */
 } HTS_Label;
 
 /* sstream --------------------------------------------------------- */
 
 /* HTS_SStream: individual state stream */
 typedef struct _HTS_SStream {
-   size_t vector_length;        /* vector length (static features only) */
-   double **mean;               /* mean vector sequence */
-   double **vari;               /* variance vector sequence */
-   double *msd;                 /* MSD parameter sequence */
-   size_t win_size;             /* # of windows (static + deltas) */
-   int *win_l_width;            /* left width of windows */
-   int *win_r_width;            /* right width of windows */
-   double **win_coefficient;    /* window cofficients */
-   size_t win_max_width;        /* maximum width of windows */
-   double *gv_mean;             /* mean vector of GV */
-   double *gv_vari;             /* variance vector of GV */
-   HTS_Boolean *gv_switch;      /* GV flag sequence */
+  size_t vector_length;        /* vector length (static features only) */
+  double **mean;               /* mean vector sequence */
+  double **vari;               /* variance vector sequence */
+  double *msd;                 /* MSD parameter sequence */
+  size_t win_size;             /* # of windows (static + deltas) */
+  int *win_l_width;            /* left width of windows */
+  int *win_r_width;            /* right width of windows */
+  double **win_coefficient;    /* window cofficients */
+  size_t win_max_width;        /* maximum width of windows */
+  double *gv_mean;             /* mean vector of GV */
+  double *gv_vari;             /* variance vector of GV */
+  HTS_Boolean *gv_switch;      /* GV flag sequence */
 } HTS_SStream;
 
 /* HTS_SStreamSet: set of state stream */
 typedef struct _HTS_SStreamSet {
-   HTS_SStream *sstream;        /* state streams */
-   size_t nstream;              /* # of streams */
-   size_t nstate;               /* # of states */
-   size_t *duration;            /* duration sequence */
-   size_t total_state;          /* total state */
-   size_t total_frame;          /* total frame */
+  HTS_SStream *sstream;        /* state streams */
+  size_t nstream;              /* # of streams */
+  size_t nstate;               /* # of states */
+  size_t *duration;            /* duration sequence */
+  size_t total_state;          /* total state */
+  size_t total_frame;          /* total frame */
 } HTS_SStreamSet;
 
 /* pstream --------------------------------------------------------- */
 
 /* HTS_SMatrices: matrices/vectors used in the speech parameter generation algorithm. */
 typedef struct _HTS_SMatrices {
-   double **mean;               /* mean vector sequence */
-   double **ivar;               /* inverse diag variance sequence */
-   double *g;                   /* vector used in the forward substitution */
-   double **wuw;                /* W' U^-1 W  */
-   double *wum;                 /* W' U^-1 mu */
+  double **mean;               /* mean vector sequence */
+  double **ivar;               /* inverse diag variance sequence */
+  double *g;                   /* vector used in the forward substitution */
+  double **wuw;                /* W' U^-1 W  */
+  double *wum;                 /* W' U^-1 mu */
 } HTS_SMatrices;
 
 /* HTS_PStream: individual PDF stream. */
 typedef struct _HTS_PStream {
-   size_t vector_length;        /* vector length (static features only) */
-   size_t length;               /* stream length */
-   size_t width;                /* width of dynamic window */
-   double **par;                /* output parameter vector */
-   HTS_SMatrices sm;            /* matrices for parameter generation */
-   size_t win_size;             /* # of windows (static + deltas) */
-   int *win_l_width;            /* left width of windows */
-   int *win_r_width;            /* right width of windows */
-   double **win_coefficient;    /* window coefficients */
-   HTS_Boolean *msd_flag;       /* Boolean sequence for MSD */
-   double *gv_mean;             /* mean vector of GV */
-   double *gv_vari;             /* variance vector of GV */
-   HTS_Boolean *gv_switch;      /* GV flag sequence */
-   size_t gv_length;            /* frame length for GV calculation */
+  size_t vector_length;        /* vector length (static features only) */
+  size_t length;               /* stream length */
+  size_t width;                /* width of dynamic window */
+  double **par;                /* output parameter vector */
+  HTS_SMatrices sm;            /* matrices for parameter generation */
+  size_t win_size;             /* # of windows (static + deltas) */
+  int *win_l_width;            /* left width of windows */
+  int *win_r_width;            /* right width of windows */
+  double **win_coefficient;    /* window coefficients */
+  HTS_Boolean *msd_flag;       /* Boolean sequence for MSD */
+  double *gv_mean;             /* mean vector of GV */
+  double *gv_vari;             /* variance vector of GV */
+  HTS_Boolean *gv_switch;      /* GV flag sequence */
+  size_t gv_length;            /* frame length for GV calculation */
 } HTS_PStream;
 
 /* HTS_PStreamSet: set of PDF streams. */
 typedef struct _HTS_PStreamSet {
-   HTS_PStream *pstream;        /* PDF streams */
-   size_t nstream;              /* # of PDF streams */
-   size_t total_frame;          /* total frame */
+  HTS_PStream *pstream;        /* PDF streams */
+  size_t nstream;              /* # of PDF streams */
+  size_t total_frame;          /* total frame */
 } HTS_PStreamSet;
 
 /* gstream --------------------------------------------------------- */
 
 /* HTS_GStream: generated parameter stream. */
 typedef struct _HTS_GStream {
-   size_t vector_length;        /* vector length (static features only) */
-   double **par;                /* generated parameter */
+  size_t vector_length;        /* vector length (static features only) */
+  double **par;                /* generated parameter */
 } HTS_GStream;
 
 /* HTS_GStreamSet: set of generated parameter stream. */
 typedef struct _HTS_GStreamSet {
-   size_t total_nsample;        /* total sample */
-   size_t total_frame;          /* total frame */
-   size_t nstream;              /* # of streams */
-   HTS_GStream *gstream;        /* generated parameter streams */
-   double *gspeech;             /* generated speech */
+  size_t total_nsample;        /* total sample */
+  size_t total_frame;          /* total frame */
+  size_t nstream;              /* # of streams */
+  HTS_GStream *gstream;        /* generated parameter streams */
+  double *gspeech;             /* generated speech */
 } HTS_GStreamSet;
 
 /* engine ---------------------------------------------------------- */
 
 /* HTS_Condition: synthesis condition */
 typedef struct _HTS_Condition {
-   /* global */
-   size_t sampling_frequency;   /* sampling frequency */
-   size_t fperiod;              /* frame period */
-   size_t audio_buff_size;      /* audio buffer size (for audio device) */
-   HTS_Boolean stop;            /* stop flag */
-   double volume;               /* volume */
-   double *msd_threshold;       /* MSD thresholds */
-   double *gv_weight;           /* GV weights */
+  /* global */
+  size_t sampling_frequency;   /* sampling frequency */
+  size_t fperiod;              /* frame period */
+  size_t audio_buff_size;      /* audio buffer size (for audio device) */
+  HTS_Boolean stop;            /* stop flag */
+  double volume;               /* volume */
+  double *msd_threshold;       /* MSD thresholds */
+  double *gv_weight;           /* GV weights */
 
-   /* duration */
-   HTS_Boolean phoneme_alignment_flag;  /* flag for using phoneme alignment in label */
-   double speed;                /* speech speed */
+  /* duration */
+  HTS_Boolean phoneme_alignment_flag;  /* flag for using phoneme alignment in label */
+  double speed;                /* speech speed */
 
-   /* spectrum */
-   size_t stage;                /* if stage=0 then gamma=0 else gamma=-1/stage */
-   HTS_Boolean use_log_gain;    /* log gain flag (for LSP) */
-   double alpha;                /* all-pass constant */
-   double beta;                 /* postfiltering coefficient */
+  /* spectrum */
+  size_t stage;                /* if stage=0 then gamma=0 else gamma=-1/stage */
+  HTS_Boolean use_log_gain;    /* log gain flag (for LSP) */
+  double alpha;                /* all-pass constant */
+  double beta;                 /* postfiltering coefficient */
 
-   /* log F0 */
-   double additional_half_tone; /* additional half tone */
+  /* log F0 */
+  double additional_half_tone; /* additional half tone */
 
-   /* interpolation weights */
-   double *duration_iw;         /* weights for duration interpolation */
-   double **parameter_iw;       /* weights for parameter interpolation */
-   double **gv_iw;              /* weights for GV interpolation */
+  /* interpolation weights */
+  double *duration_iw;         /* weights for duration interpolation */
+  double **parameter_iw;       /* weights for parameter interpolation */
+  double **gv_iw;              /* weights for GV interpolation */
 } HTS_Condition;
 
 /* HTS_Engine: Engine itself. */
 typedef struct _HTS_Engine {
-   HTS_Condition condition;     /* synthesis condition */
-   HTS_Audio audio;             /* audio output */
-   HTS_ModelSet ms;             /* set of duration models, HMMs and GV models */
-   HTS_Label label;             /* label */
-   HTS_SStreamSet sss;          /* set of state streams */
-   HTS_PStreamSet pss;          /* set of PDF streams */
-   HTS_GStreamSet gss;          /* set of generated parameter streams */
+  HTS_Condition condition;     /* synthesis condition */
+  HTS_Audio audio;             /* audio output */
+  HTS_ModelSet ms;             /* set of duration models, HMMs and GV models */
+  HTS_Label label;             /* label */
+  HTS_SStreamSet sss;          /* set of state streams */
+  HTS_PStreamSet pss;          /* set of PDF streams */
+  HTS_GStreamSet gss;          /* set of generated parameter streams */
 } HTS_Engine;
 
 /* engine method --------------------------------------------------- */
@@ -396,8 +456,3 @@ void HTS_Engine_refresh(HTS_Engine * engine);
 
 /* HTS_Engine_clear: free engine */
 void HTS_Engine_clear(HTS_Engine * engine);
-
-/****************************************************************************************************************************/
-FILE *fopen(const char *filename, const char *mode);
-int fputs(const char *, FILE *);
-int fclose(FILE *);
