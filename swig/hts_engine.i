@@ -456,3 +456,6 @@ void HTS_Engine_refresh(HTS_Engine * engine);
 
 /* HTS_Engine_clear: free engine */
 void HTS_Engine_clear(HTS_Engine * engine);
+
+/* HTS_GStreamSet_get_static_length: get features length */
+size_t HTS_GStreamSet_get_vector_length(HTS_GStreamSet * gss, size_t stream_index);

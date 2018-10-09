@@ -43,13 +43,22 @@ public class JHTSEngineWrapper
         }
     }
 
+    /** The internal HTS engine */
     private HTS_Engine engine;
 
+    /**
+     *  Default constructor which initialize the engine
+     *
+     */
     public JHTSEngineWrapper() {
         engine = new HTS_Engine();
         HTSEngine.HTS_Engine_initialize(engine);
     }
 
+    /**
+     *  Method to clear the engine memory. Needs to be called before shutdown the java application
+     *
+     */
     public void clear() {
         HTSEngine.HTS_Engine_clear(engine);
     }
@@ -57,6 +66,13 @@ public class JHTSEngineWrapper
     /**********************************************************************
      ***  Configurations/accessors
      **********************************************************************/
+    /**
+     *  Method to set the voice given by its path. The engine is cleaned so all the other parameters
+     *  are reset at the same time
+     *
+     *  @param voice_path the path of the hts engine voice
+     *  @throws HTSEngineException if the loading of voice fails.
+     */
     public void setVoice(String voice_path) throws Exception {
         String[] voice = {voice_path};
 
@@ -69,21 +85,47 @@ public class JHTSEngineWrapper
         }
     }
 
+    /**
+     *  Method to set the period value
+     *
+     *  @param period the new period value
+     */
     public void setPeriod(int period) {
     }
 
+    /**
+     *  Method to set the alpha value
+     *
+     *  @param alpha the new alpha value
+     */
     public void setAlpha(double alpha) {
     }
 
+
+    /**
+     *  Method to set the beta value
+     *
+     *  @param beta the new beta value
+     */
     public void setBeta(double beta) {
     }
 
+    /**
+     *  Method to set the speed value
+     *
+     *  @param speed the new speed value
+     */
     public void setSpeed(double speed) {
     }
 
     public void setMSDThreshold(double msd_threshold) {
     }
 
+    /**
+     *  Method to set the volume (in dB)
+     *
+     *  @param speed the new volume (in dB)
+     */
     public void setVolume(double volume) {
     }
 
@@ -110,33 +152,48 @@ public class JHTSEngineWrapper
          */
     }
 
-    public void getWAV() {
-        /*
+    /**
+     *  Method to get the generated parameters corresponding to the stream which index is given in
+     *  parameter.
+     *
+     *  @param i_stream the index of the stream
+     *  @return the generated parameter array
+     */
+    public double[][] getGenerateParameterSequence(int i_stream) {
+        // Get dimension
+        HTS_GStreamSet gss = engine.getGss();
+        int nb_frames = (int) HTSEngine.HTS_Engine_get_total_frame(engine);
+        int dim = (int) HTSEngine.HTS_GStreamSet_get_vector_length(gss, i_stream);
 
-         */
+        // Get values
+        double[][] out = new double[nb_frames][dim];
+        for (int t=0; t<nb_frames; t++)
+            for (int d=0; d<dim; d++)
+                out[t][d] = (float) HTSEngine.HTS_Engine_get_generated_parameter(engine, i_stream, t, d);
+
+        return out;
     }
 
-    public void getGenerateParameterSequence(int i_stream) {
-        /*
-   size_t i, j;
-   float temp;
-   HTS_GStreamSet *gss = &engine->gss;
-
-   for (i = 0; i < HTS_GStreamSet_get_total_frame(gss); i++)
-      for (j = 0; j < HTS_GStreamSet_get_vector_length(gss, stream_index); j++) {
-         temp = (float) HTS_GStreamSet_get_parameter(gss, stream_index, i, j);
-         fwrite(&temp, sizeof(float), 1, fp);
-      }
-         */
-    }
-
-
-    public AudioInputStream synthesize(String labels) throws Exception {
+    /**
+     *  Synthesis method
+     *
+     *  @param labels the string containing the full context labels (so a multiple line string)
+     *  @return the AudioStream containing the result of the synthesis
+     *  @throws HTSEngineException if the synthesis fails. A message specify the reason.
+     */
+    public AudioInputStream synthesize(String labels) throws HTSEngineException {
         String[] label_lines = labels.split("\n");
         return synthesize(label_lines);
     }
 
-    public AudioInputStream synthesize(String[] label_lines) throws Exception {
+    /**
+     *  Synthesis method
+     *
+     *  @param label_lines the string containing the full context labels (so a multiple line string)
+     *  @return the AudioStream containing the result of the synthesis
+     *  @throws HTSEngineException if the synthesis fails. A message specify the reason.
+     */
+    public AudioInputStream synthesize(String[] label_lines) throws HTSEngineException {
         // Clear engine generated parameter
         HTSEngine.HTS_Engine_refresh(engine);
 
@@ -149,7 +206,7 @@ public class JHTSEngineWrapper
         int nb_samples = (int) gss.getTotal_nsample();
 
         if (nb_samples <= 0) {
-            throw new Exception("Problem with the synthesis, the produced number of samples should be strictly positive and not: " + nb_samples);
+            throw new HTSEngineException("Problem with the synthesis, the produced number of samples should be strictly positive and not: " + nb_samples);
         }
 
         //  1. Generate header
