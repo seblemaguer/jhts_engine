@@ -1,7 +1,7 @@
 %include carrays.i
 %array_functions( double, double_array );
 %array_functions( double*, double_p_array );
-
+%array_functions( size_t, size_array );
 
 /**********************************************************************************************************************/
 

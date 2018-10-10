@@ -1,6 +1,7 @@
 package jhts_engine;
 
 import java.util.List;
+import java.util.ArrayList;
 
 // IO
 import java.io.File;
@@ -144,5 +145,35 @@ public class JHTSEngineWrapperTest {
         for (int t=0; t<f0.length; t++) {
             Assert.assertEquals((float) f0[t][0], (float) f0_ref[t], 0.00001);
         }
+    }
+
+
+    @Test
+    public void testDurations() throws Exception {
+
+        // Load label
+        URL url_lab = JHTSEngineWrapperTest.class.getResource("test.lab");
+        File lab_f = new File(url_lab.toURI());
+        List<String> lines = Files.readAllLines(lab_f.toPath());
+        String labels[] = lines.toArray(new String[0]);
+
+        // Generate
+        AudioInputStream ais = ew.synthesize(labels);
+        List<FilledLabel> labels_with_dur = ew.getDurations();
+        List<String> gen_lines = new ArrayList<String>();
+        for (FilledLabel l: labels_with_dur) {
+            gen_lines.add(l.toString());
+        }
+
+        // Load reference
+        URL url_ref = JHTSEngineWrapperTest.class.getResource("test_lab_with_dur.lab");
+        File ref_f = new File(url_ref.toURI());
+        List<String> ref_lines = Files.readAllLines(ref_f.toPath());
+
+
+        // Assert !
+        assertThat(gen_lines).hasSameSizeAs(ref_lines);
+        assertThat(gen_lines).containsExactlyElementsOf(ref_lines);
+
     }
 }

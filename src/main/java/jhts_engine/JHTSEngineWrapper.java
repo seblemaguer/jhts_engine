@@ -1,5 +1,8 @@
 package jhts_engine;
 
+// List
+import java.util.ArrayList;
+
 // Library loading part
 import cz.adamh.utils.NativeUtils;
 
@@ -118,6 +121,11 @@ public class JHTSEngineWrapper
     public void setSpeed(double speed) {
     }
 
+    /**
+     *  Method to set the MSD threshold
+     *
+     *  @param msd_threshold the MSD threshold
+     */
     public void setMSDThreshold(double msd_threshold) {
     }
 
@@ -132,24 +140,47 @@ public class JHTSEngineWrapper
     /**********************************************************************
      ***  operations
      **********************************************************************/
-    public void getDurations() {
-        /*
+    /**
+     *  Method to get the generated duration per segment
+     *
+     *  @return the array of labels filled with start and durations
+     */
+    public ArrayList<FilledLabel> getDurations() {
+        ArrayList<FilledLabel> labels_with_dur = new ArrayList<FilledLabel>();
 
-   size_t i, j;
-   size_t frame, state, duration;
+        // Get engine information
+        HTS_SStreamSet sss = engine.getSss();
+        HTS_Label lab_engine = engine.getLabel();
+        HTS_LabelString it = lab_engine.getHead();
 
-   HTS_Label *label = &engine->label;
-   HTS_SStreamSet *sss = &engine->sss;
-   size_t nstate = HTS_ModelSet_get_nstate(&engine->ms);
-   double rate = engine->condition.fperiod * 1.0e+07 / engine->condition.sampling_frequency;
+        // Get the global duration information
+        double rate = engine.getCondition().getFperiod() * 1.0e+07 / engine.getCondition().getSampling_frequency();
+        int n_state = (int) engine.getMs().getNum_states();
+        SWIGTYPE_p_size_t durations = sss.getDuration();
 
-   for (i = 0, state = 0, frame = 0; i < HTS_Label_get_size(label); i++) {
-      for (j = 0, duration = 0; j < nstate; j++)
-         duration += HTS_SStreamSet_get_duration(sss, state++);
-      fprintf(fp, "%lu %lu %s\n", (unsigned long) (frame * rate), (unsigned long) ((frame + duration) * rate), HTS_Label_get_string(label, i));
-      frame += duration;
-   }
-         */
+        // Get the label duration information
+        int state = 0;
+        int frame = 0;
+        for (int i=0; i < lab_engine.getSize(); i++) {
+            // Compute segment duration
+            int duration = 0;
+            for (int j=0; j < n_state; j++) {
+                duration += HTSEngine.size_array_getitem(durations, state);
+                state++;
+            }
+
+            // Add label to the list
+            FilledLabel tmp = new FilledLabel(it.getName(),
+                                              (long) (frame * rate),
+                                              (long) (duration * rate));
+            labels_with_dur.add(tmp);
+
+            // Move to next label segment
+            it = it.getNext();
+            frame += duration;
+        }
+
+        return labels_with_dur;
     }
 
     /**
