@@ -127,7 +127,7 @@ public class JHTSEngineWrapperTest {
 
         // Generate
         ew.generateAcousticParameters(labels);
-        double[][] f0 = ew.getGenerateParameterSequence(1);
+        double[][] f0 = ew.getGeneratedParameterSequence(1);
 
         // Load reference F0
         byte[] bytes = ByteStreams.toByteArray(JHTSEngineWrapperTest.class.getResourceAsStream("test.lf0"));

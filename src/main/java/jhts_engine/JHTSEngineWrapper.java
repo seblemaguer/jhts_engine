@@ -190,7 +190,7 @@ public class JHTSEngineWrapper
      *  @param i_stream the index of the stream
      *  @return the generated parameter array
      */
-    public double[][] getGenerateParameterSequence(int i_stream) throws HTSEngineException{
+    public double[][] getGeneratedParameterSequence(int i_stream) throws HTSEngineException{
         // Get dimension
         HTS_GStreamSet gss = engine.getGss();
         if (gss == null)
