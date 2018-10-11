@@ -117,9 +117,9 @@ model {
 /**********************************************************************************************
  ** Project meta + publishing part
  ***********************************************************************************************/
-version '0.2-SNAPSHOT'
+version '0.1-SNAPSHOT'
 group "de.dfki.mary"
-description "Artifact containing a wrapper for SPTK"
+description "Artifact containing a wrapper for hts-engine"
 
 task sourceJar(type: Jar) {
     from sourceSets.main.allJava
@@ -140,7 +140,7 @@ publishing {
             url "$rootProject.buildDir/repo"
         }
         maven {
-            url version.endsWith('-SNAPSHOT') ? 'https://oss.jfrog.org/artifactory/oss-snapshot-local' : 'https://api.bintray.com/maven/marytts/marytts/jsptk'
+            url version.endsWith('-SNAPSHOT') ? 'https://oss.jfrog.org/artifactory/oss-snapshot-local' : 'https://api.bintray.com/maven/marytts/marytts/hts-engine'
             credentials {
                 username = findProperty('bintrayUser')
                 password = findProperty('bintrayApiKey')
