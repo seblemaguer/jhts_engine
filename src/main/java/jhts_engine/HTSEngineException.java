@@ -8,7 +8,10 @@ package jhts_engine;
  */
 public class HTSEngineException extends Exception {
 
-    /**
+    /** Serial ID needed for serializable classes */
+	private static final long serialVersionUID = -7439529628623918148L;
+
+	/**
      *  Constructor with message
      *
      *  @param message the message describing the reason of the exception

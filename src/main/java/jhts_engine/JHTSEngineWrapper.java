@@ -16,7 +16,7 @@ import javax.sound.sampled.AudioInputStream;
 
 
 /**
- *  The convinient wrapper class around JNI hts_engine class.
+ *  The convenient wrapper class around JNI hts_engine class.
  *
  *  The javadoc indicated function called + adaptation. However, for more information about the
  *  actual function, please read the HTS_ENGINE documentation.
@@ -272,61 +272,51 @@ public class JHTSEngineWrapper
         return ais;
     }
 
+    /**
+     *  Method to just generate the acoustic parameter features without going to the vocoder
+     *  process.
+     *
+     *  @param label_lines the label sequence to "synthesize"
+     *  @throws HTSEngineException if something goes wrong (see message for more information).
+     */
+    public void generateAcousticParameters(String[] label_lines) throws HTSEngineException {
+        // Clear engine generated parameter
+        HTSEngine.HTS_Engine_refresh(engine);
+
+        // Generate state sequence from the labels
+        boolean res = HTSEngine.HTS_Engine_generate_state_sequence_from_strings(engine, label_lines, label_lines.length);
+        if (! res) {
+            HTSEngine.HTS_Engine_refresh(engine);
+            throw new HTSEngineException("Generation of the state sequence failed. Check your voice and your labels");
+        }
+
+        // Generate acoustic parameters
+        res = HTSEngine.HTS_Engine_generate_parameter_sequence(engine);
+        if (! res) {
+            HTSEngine.HTS_Engine_refresh(engine);
+            throw new HTSEngineException("Generation of the parameter sequence failed. Check your voice");
+        }
+
+        // Fill the datastructure accurately
+        res = HTSEngine.HTS_MinimalGStreamSet_create(engine.getGss(), engine.getPss(),
+                                                     engine.getCondition().getFperiod());
+        if (! res) {
+            HTSEngine.HTS_Engine_refresh(engine);
+            throw new HTSEngineException("Generation of the parameter sequence failed. Check your voice");
+        }
+    }
+
     /**********************************************************************
      *** JNI Utilities
      **********************************************************************/
-
-
-    /**
-     *  Util method to convert a swig array to a native double array in java
-     *
-     *  This method doesn't clear any memory !
-     *
-     *  @param ar the swig array
-     *  @param length the length of the array
-     *  @return the java native double array containing the values from the swig array
-     */
-    private static double[] swig2java(SWIGTYPE_p_double ar, int length) {
-        double[] res = new double[length];
-
-        for (int i=0; i<length; i++)
-            res[i] = HTSEngine.double_array_getitem(ar, i);
-
-        return res;
-    }
-
-    /**
-     *  Utilitary method to generate a swig array from a java native double array
-     *
-     *  @param ar the double array
-     *  @return the swig array containing the values from the java native double array
-     */
-    private static SWIGTYPE_p_double java2swig(double[] ar) {
-        SWIGTYPE_p_double res = HTSEngine.new_double_array(ar.length);
-
-        for (int i=0; i<ar.length; i++)
-            HTSEngine.double_array_setitem(res, i, ar[i]);
-
-        return res;
-    }
-
-    /**
-     *  Method to copy the containing of the java native array into a preallocated swig array
-     *
-     *  @param src the java native array
-     *  @param dest the preallocated swig array
-     */
-    private static void copy(double[] src, SWIGTYPE_p_double dest) {
-        for (int i=0; i<src.length; i++)
-            HTSEngine.double_array_setitem(dest, i, src[i]);
-    }
 
     /**
      *  Method to clear the memory of a swig double array
      *
      *  @param ar the swig array to free
      */
-    private static void clear(SWIGTYPE_p_double ar) {
+    @SuppressWarnings("unused")
+	private static void clear(SWIGTYPE_p_double ar) {
         HTSEngine.delete_double_array(ar);
     }
 }

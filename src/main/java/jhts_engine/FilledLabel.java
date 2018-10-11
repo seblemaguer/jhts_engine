@@ -7,6 +7,9 @@ package jhts_engine;
  */
 public class FilledLabel
 {
+    /** Helper constant to make the conversion between milliseconds and HTK unit */
+    public static final int MS_TO_HTK = (int) 1E4;
+
     /** The label of the segment*/
     private String label;
 
@@ -84,6 +87,9 @@ public class FilledLabel
         this.duration = duration;
     }
 
+    /**
+     *  Convert the filled label into a standard HTK label line
+     */
     @Override
     public String toString() {
         return String.format("%d %d %s",
