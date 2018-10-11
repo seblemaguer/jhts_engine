@@ -8,7 +8,7 @@ package jhts_engine;
 public class FilledLabel
 {
     /** Helper constant to make the conversion between milliseconds and HTK unit */
-    public static final int MS_TO_HTK = (int) 1E4;
+    public static final double MS_TO_HTK = 1E4;
 
     /** The label of the segment*/
     private String label;

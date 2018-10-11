@@ -30,14 +30,14 @@ public class JHTSEngineWrapper
         String libResourceName;
         String osName = System.getProperty("os.name");
         switch (osName) {
-            case ("Mac OS X"):
-                libResourceName = "libhts_engine.dylib";
-                break;
-            case ("Linux"):
-                libResourceName = "libhts_engine.so";
-                break;
-            default:
-                throw new RuntimeException("Cannot load library for OS: " + osName);
+        case ("Mac OS X"):
+            libResourceName = "libhts_engine.dylib";
+            break;
+        case ("Linux"):
+            libResourceName = "libhts_engine.so";
+            break;
+        default:
+            throw new RuntimeException("Cannot load library for OS: " + osName);
         }
         try {
             NativeUtils.loadLibraryFromJar("/" + libResourceName);
@@ -76,7 +76,7 @@ public class JHTSEngineWrapper
 
         // Check that the voice has been loaded
         if (HTSEngine.HTS_Engine_get_nvoices(engine) <= 0) {
-            throw new Exception("Loading of the voice failed");
+            throw new HTSEngineException("Loading of the voice failed");
         }
     }
 
@@ -86,6 +86,7 @@ public class JHTSEngineWrapper
      *  @param period the new period value
      */
     public void setPeriod(int period) {
+
     }
 
     /**
@@ -190,8 +191,8 @@ public class JHTSEngineWrapper
 
         if (gss.getNstream() == 0)
             throw new HTSEngineException("The engine is not initialized properly, there is no stream in the model set (run synthesize or generateParameters first !)");
-       int nb_frames = (int) HTSEngine.HTS_Engine_get_total_frame(engine);
-       int dim = (int) HTSEngine.HTS_GStreamSet_get_vector_length(gss, i_stream);
+        int nb_frames = (int) HTSEngine.HTS_Engine_get_total_frame(engine);
+        int dim = (int) HTSEngine.HTS_GStreamSet_get_vector_length(gss, i_stream);
 
         // Get values
         double[][] out = new double[nb_frames][dim];
@@ -210,8 +211,7 @@ public class JHTSEngineWrapper
      *  @throws HTSEngineException if the synthesis fails. A message specify the reason.
      */
     public AudioInputStream synthesize(String labels) throws HTSEngineException {
-        String[] label_lines = labels.split("\n");
-        return synthesize(label_lines);
+        return synthesize(labels.split("\n"));
     }
 
     /**
@@ -262,6 +262,19 @@ public class JHTSEngineWrapper
 
         // Return the stream
         return ais;
+    }
+
+
+    /**
+     *  Method to just generate the acoustic parameter features without going to the vocoder
+     *  process.
+     *
+     *
+     *  @param labels the string containing the full context labels (so a multiple line string)
+     *  @throws HTSEngineException if something goes wrong (see message for more information).
+     */
+    public void generateAcousticParameters(String labels) throws HTSEngineException {
+        generateAcousticParameters(labels.split("\n"));
     }
 
     /**
