@@ -58,14 +58,6 @@ public class JHTSEngineWrapper
         HTSEngine.HTS_Engine_initialize(engine);
     }
 
-    /**
-     *  Method to clear the engine memory. Needs to be called before shutdown the java application
-     *
-     */
-    public void clear() {
-        HTSEngine.HTS_Engine_clear(engine);
-    }
-
     /**********************************************************************
      ***  Configurations/accessors
      **********************************************************************/
@@ -231,7 +223,7 @@ public class JHTSEngineWrapper
      */
     public AudioInputStream synthesize(String[] label_lines) throws HTSEngineException {
         // Clear engine generated parameter
-        HTSEngine.HTS_Engine_refresh(engine);
+        refresh();
 
         // Achieve synthesis
         HTSEngine.HTS_Engine_synthesize_from_strings(engine, label_lines, label_lines.length);
@@ -281,7 +273,7 @@ public class JHTSEngineWrapper
      */
     public void generateAcousticParameters(String[] label_lines) throws HTSEngineException {
         // Clear engine generated parameter
-        HTSEngine.HTS_Engine_refresh(engine);
+        refresh();
 
         // Generate state sequence from the labels
         boolean res = HTSEngine.HTS_Engine_generate_state_sequence_from_strings(engine, label_lines, label_lines.length);
@@ -307,16 +299,22 @@ public class JHTSEngineWrapper
     }
 
     /**********************************************************************
-     *** JNI Utilities
+     *** Cleaning utils
      **********************************************************************/
+    /**
+     *  Method to refresh the engine = free the generated part of the structures
+     *
+     */
+    public void refresh() {
+        HTSEngine.HTS_Engine_refresh(engine);
+    }
 
     /**
-     *  Method to clear the memory of a swig double array
+     *  Method to clear the engine memory. Needs to be called before shutdown the java application
      *
-     *  @param ar the swig array to free
      */
-    @SuppressWarnings("unused")
-	private static void clear(SWIGTYPE_p_double ar) {
-        HTSEngine.delete_double_array(ar);
+    public void clear() {
+        HTSEngine.HTS_Engine_clear(engine);
     }
+
 }
