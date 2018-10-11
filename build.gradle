@@ -68,13 +68,10 @@ model {
 
                 c {
                     source {
-                        srcDirs 'hts_engine/'
+                        srcDirs 'hts_engine/', "src/main/c"
                         include '**/*.c'
-                        exclude "example/*.c"
-                        exclude "wavjoin/*"
-                        exclude "wavsplit/*"
                         exclude { details ->
-                            details.file.parentFile.parent.endsWith("bin") && details.file.name.endsWith(".c") && (! details.file.name.startsWith("_"))
+                            details.file.parentFile.parent.endsWith("bin")
                         }
                     }
                     exportedHeaders {
@@ -85,7 +82,7 @@ model {
 
             binaries {
                 all {
-                    cCompiler.args '-O3', '-Wall', '-fno-common', '-Wstrict-prototypes'// , '-ansi'
+                    cCompiler.args '-g', '-Wall', '-fno-common', '-Wstrict-prototypes', '-ansi'
                     cCompiler.args '-I', "${org.gradle.internal.jvm.Jvm.current().javaHome}/include"
                     switch (targetPlatform.operatingSystem) {
                         case { it.macOsX }:

@@ -1,9 +1,23 @@
+
+%{
+#include "HTS_engine.h"
+  %}
+
+/******************************************************************************************************************/
+/* // Redefines hts boolean type (based on https://stackoverflow.com/questions/42301700/swig-how-to-define-a-typemap-that-converts-a-c-typedefined-boolean-to-java-boole )*/
+%typemap(jstype) HTS_Boolean "boolean"
+%typemap(javaout) HTS_Boolean {
+  return $jnicall != 0;
+}
+%typemap(javain) HTS_Boolean "$javainput?1:0"
+
+ /* Define some needed arrays */
 %include carrays.i
 %array_functions( double, double_array );
 %array_functions( double*, double_p_array );
 %array_functions( size_t, size_array );
 
-/**********************************************************************************************************************/
+/******************************************************************************************************************/
 
 /* This tells SWIG to treat char ** as a special case when used as a parameter in a function call */
 %typemap(in) char ** (jint size) {
@@ -59,12 +73,8 @@
   return $jnicall;
  }
 
-/**********************************************************************************************************************/
+/******************************************************************************************************************/
 
-
-%{
-#include "HTS_engine.h"
-  %}
 
 /* audio ----------------------------------------------------------- */
 
@@ -418,9 +428,6 @@ double HTS_Engine_get_generated_parameter(HTS_Engine * engine, size_t stream_ind
 /* HTS_Engine_get_generated_speech: output generated speech */
 double HTS_Engine_get_generated_speech(HTS_Engine * engine, size_t index);
 
-/* HTS_Engine_synthesize_from_fn: synthesize speech from file name */
-HTS_Boolean HTS_Engine_synthesize_from_fn(HTS_Engine * engine, const char *fn);
-
 /* HTS_Engine_synthesize_from_strings: synthesize speech from string list */
 HTS_Boolean HTS_Engine_synthesize_from_strings(HTS_Engine * engine, char **lines, size_t num_lines);
 
@@ -436,21 +443,6 @@ HTS_Boolean HTS_Engine_generate_parameter_sequence(HTS_Engine * engine);
 /* HTS_Engine_generate_sample_sequence: generate sample sequence (3rd synthesis step) */
 HTS_Boolean HTS_Engine_generate_sample_sequence(HTS_Engine * engine);
 
-/* HTS_Engine_save_information: save trace information */
-void HTS_Engine_save_information(HTS_Engine * engine, FILE * fp);
-
-/* HTS_Engine_save_label: save label with time */
-void HTS_Engine_save_label(HTS_Engine * engine, FILE * fp);
-
-/* HTS_Engine_save_generated_parameter: save generated parameter */
-void HTS_Engine_save_generated_parameter(HTS_Engine * engine, size_t stream_index, FILE * fp);
-
-/* HTS_Engine_save_generated_speech: save generated speech */
-void HTS_Engine_save_generated_speech(HTS_Engine * engine, FILE * fp);
-
-/* HTS_Engine_save_riff: save RIFF format file */
-void HTS_Engine_save_riff(HTS_Engine * engine, FILE * fp);
-
 /* HTS_Engine_refresh: free memory per one time synthesis */
 void HTS_Engine_refresh(HTS_Engine * engine);
 
@@ -459,3 +451,8 @@ void HTS_Engine_clear(HTS_Engine * engine);
 
 /* HTS_GStreamSet_get_static_length: get features length */
 size_t HTS_GStreamSet_get_vector_length(HTS_GStreamSet * gss, size_t stream_index);
+
+
+/******************************************************************************************************************/
+
+HTS_Boolean HTS_MinimalGStreamSet_create(HTS_GStreamSet * gss, HTS_PStreamSet * pss, size_t fperiod);

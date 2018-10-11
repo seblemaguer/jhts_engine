@@ -126,7 +126,7 @@ public class JHTSEngineWrapperTest {
         String labels[] = lines.toArray(new String[0]);
 
         // Generate
-        AudioInputStream ais = ew.synthesize(labels);
+        ew.generateAcousticParameters(labels);
         double[][] f0 = ew.getGenerateParameterSequence(1);
 
         // Load reference F0
@@ -158,7 +158,7 @@ public class JHTSEngineWrapperTest {
         String labels[] = lines.toArray(new String[0]);
 
         // Generate
-        AudioInputStream ais = ew.synthesize(labels);
+        ew.generateAcousticParameters(labels);
         List<FilledLabel> labels_with_dur = ew.getDurations();
         List<String> gen_lines = new ArrayList<String>();
         for (FilledLabel l: labels_with_dur) {

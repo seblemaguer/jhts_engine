@@ -190,11 +190,16 @@ public class JHTSEngineWrapper
      *  @param i_stream the index of the stream
      *  @return the generated parameter array
      */
-    public double[][] getGenerateParameterSequence(int i_stream) {
+    public double[][] getGenerateParameterSequence(int i_stream) throws HTSEngineException{
         // Get dimension
         HTS_GStreamSet gss = engine.getGss();
-        int nb_frames = (int) HTSEngine.HTS_Engine_get_total_frame(engine);
-        int dim = (int) HTSEngine.HTS_GStreamSet_get_vector_length(gss, i_stream);
+        if (gss == null)
+            throw new HTSEngineException("The engine is not initialized properly (run synthesize or generateParameters first !)");
+
+        if (gss.getNstream() == 0)
+            throw new HTSEngineException("The engine is not initialized properly, there is no stream in the model set (run synthesize or generateParameters first !)");
+       int nb_frames = (int) HTSEngine.HTS_Engine_get_total_frame(engine);
+       int dim = (int) HTSEngine.HTS_GStreamSet_get_vector_length(gss, i_stream);
 
         // Get values
         double[][] out = new double[nb_frames][dim];
